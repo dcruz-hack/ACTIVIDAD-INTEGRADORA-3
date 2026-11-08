@@ -1,6 +1,6 @@
 # ZM TECHNOLOGY – Aplicación móvil Flutter
 
-Aplicación comercial para ZM TECHNOLOGY que consume el catálogo público de la tienda web.
+Aplicación para ZM TECHNOLOGY que consume el catálogo público de la tienda web.
 
 ## API propia utilizada
 - Catálogo: `GET https://zmtechnology.store/api/public/products`
