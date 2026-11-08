@@ -1,30 +1,69 @@
 import 'package:flutter/material.dart';
-import '../models/store_product.dart';
-import '../services/contact_service.dart';
-class CatalogScreen extends StatefulWidget {const CatalogScreen({super.key});@override State<CatalogScreen> createState()=>_CatalogScreenState();}
-class _CatalogScreenState extends State<CatalogScreen>{
- String category='Todos',search='';
- @override Widget build(BuildContext context){
-  final items=storeProducts.where((p)=>(category=='Todos'||p.category==category)&&('${p.name} ${p.category} ${p.specs}'.toLowerCase().contains(search.toLowerCase()))).toList();
-  return Column(children:[
-   Padding(padding:const EdgeInsets.fromLTRB(15,12,15,8),child:TextField(onChanged:(v)=>setState(()=>search=v),decoration:InputDecoration(hintText:'Buscar productos o componentes',prefixIcon:const Icon(Icons.search),filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(14),borderSide:BorderSide.none)))),
-   SizedBox(height:48,child:ListView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:12),children:storeCategories.map((c)=>Padding(padding:const EdgeInsets.only(right:6),child:ChoiceChip(label:Text(c),selected:category==c,onSelected:(_)=>setState(()=>category=c)))).toList())),
-   Expanded(child:ListView(padding:const EdgeInsets.all(14),children:[
-    const Text('Catálogo ZM TECHNOLOGY · Consulta precio y disponibilidad',style:TextStyle(fontSize:12,color:Colors.black54)),
-    const SizedBox(height:10),
-    ...items.map((p)=>Card(margin:const EdgeInsets.only(bottom:12),child:Padding(padding:const EdgeInsets.all(14),child:Row(children:[
-     Container(width:58,height:58,decoration:BoxDecoration(color:Theme.of(context).colorScheme.primaryContainer,borderRadius:BorderRadius.circular(14)),child:Icon(_icon(p.category),size:30,color:Theme.of(context).colorScheme.primary)),
-     const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Text(p.category.toUpperCase(),style:TextStyle(fontSize:10,color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.bold)),
-      Text(p.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15)),
-      Text(p.description,style:const TextStyle(fontSize:11),maxLines:2,overflow:TextOverflow.ellipsis),
-      Text(p.specs,style:const TextStyle(fontSize:10,color:Colors.black54),maxLines:2,overflow:TextOverflow.ellipsis),
-      const SizedBox(height:7),OutlinedButton.icon(onPressed:()=>ContactService.openWhatsApp(message:'Hola ZM TECHNOLOGY, deseo cotizar ${p.name}. ¿Me comparten precio y disponibilidad?'),icon:const Icon(Icons.chat,size:15),label:const Text('Cotizar por WhatsApp'),style:OutlinedButton.styleFrom(foregroundColor:const Color(0xFF128C7E),visualDensity:VisualDensity.compact)),
-     ]))
-    ])))),
-    if(items.isEmpty) const Center(child:Text('No se encontraron productos.')),
-   ]))
-  ]);
- }
- IconData _icon(String c)=>switch(c){'PC Gamer'=>Icons.sports_esports,'Computadoras'=>Icons.desktop_windows,'Laptops'=>Icons.laptop,'Componentes'=>Icons.memory,'Almacenamiento'=>Icons.storage,_=>Icons.monitor};
+import 'package:provider/provider.dart';
+import '../main.dart';
+import '../providers/product_provider.dart';
+import '../models/product_model.dart';
+import '../widgets/product_card.dart';
+import 'product_detail_screen.dart';
+
+class CatalogScreen extends StatefulWidget {
+  const CatalogScreen({super.key});
+  @override State<CatalogScreen> createState() => _CatalogScreenState();
+}
+class _CatalogScreenState extends State<CatalogScreen> {
+  String query = '', selectedCategory = 'Todos';
+  bool requested = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!requested) {
+      requested = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<ProductProvider>().loadProducts();
+      });
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<ProductProvider>();
+    final categories = <String>{'Todos', ...p.products.map((e) => e.category).where((e) => e.isNotEmpty)}.toList();
+    final items = p.products.where((e) {
+      final matchCategory = selectedCategory == 'Todos' || e.category == selectedCategory;
+      return matchCategory && '${e.title} ${e.brand} ${e.category} ${e.sku}'.toLowerCase().contains(query.toLowerCase());
+    }).toList();
+    return Column(children: [
+      Padding(padding: const EdgeInsets.fromLTRB(15,13,15,8), child: TextField(
+        onChanged: (v) => setState(() => query = v),
+        decoration: const InputDecoration(hintText: 'Buscar en ZM TECHNOLOGY', prefixIcon: Icon(Icons.search, color: zmNavy),
+          suffixIcon: Icon(Icons.tune, color: zmNavy)))),
+      if (p.products.isNotEmpty) SizedBox(height: 46, child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 14), scrollDirection: Axis.horizontal,
+        children: categories.map((c) => Padding(padding: const EdgeInsets.only(right: 7), child: ChoiceChip(
+          label: Text(c), selected: selectedCategory == c, onSelected: (_) => setState(() => selectedCategory = c),
+          selectedColor: const Color(0xFFE5F4FC), side: BorderSide(color: selectedCategory == c ? zmBlue : const Color(0xFFE0E5EC)),
+          labelStyle: TextStyle(color: selectedCategory == c ? zmBlue : zmNavy, fontWeight: FontWeight.w600, fontSize: 11),
+        ))).toList())),
+      Expanded(child: switch (p.status) {
+        ProductStatus.loading => const Center(child: CircularProgressIndicator()),
+        ProductStatus.error => Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(
+          mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off_outlined, size: 48, color: zmRed),
+            Text(p.errorMessage ?? 'No se pudo cargar el catálogo.', textAlign: TextAlign.center),
+            const SizedBox(height: 14), FilledButton(onPressed: () => context.read<ProductProvider>().loadProducts(), child: const Text('Reintentar'))]))),
+        ProductStatus.success => RefreshIndicator(onRefresh: () => context.read<ProductProvider>().loadProducts(),
+          child: filteredGrid(items)),
+      }),
+    ]);
+  }
+
+  Widget filteredGrid(List<Product> items) => items.isEmpty
+    ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 100), Center(child: Text('No se encontraron productos.'))])
+    : GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(13,12,13,22),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: .67),
+      itemCount: items.length,
+      itemBuilder: (context,i) {
+        final product = items[i];
+        return ProductCard(product: product, onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ProductDetailScreen(product: product))));
+      });
 }

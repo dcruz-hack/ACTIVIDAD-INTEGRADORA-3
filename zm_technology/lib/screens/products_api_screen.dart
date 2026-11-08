@@ -24,7 +24,7 @@ class _ProductsApiScreenState extends State<ProductsApiScreen> {
     final provider = context.watch<ProductProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catálogo de productos'),
+        title: const Text('Productos ZM TECHNOLOGY'),
         actions: [
           PopupMenuButton<String>(
             tooltip: 'Opciones de pruebas',
@@ -72,7 +72,7 @@ class _ProductsApiScreenState extends State<ProductsApiScreen> {
                             Text('Conexión exitosa',
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold)),
-                            Text('${provider.products.length} productos recibidos desde DummyJSON'),
+                            Text('${provider.products.length} productos recibidos desde ZM TECHNOLOGY'),
                           ],
                         ),
                       ),
@@ -103,7 +103,7 @@ class _LoadingView extends StatelessWidget {
       children: [
         CircularProgressIndicator(),
         SizedBox(height: 18),
-        Text('Conectando con el servicio de productos...'),
+        Text('Conectando con ZM TECHNOLOGY...'),
         SizedBox(height: 6),
         Text('Por favor, espera.', style: TextStyle(color: Colors.grey)),
       ],
