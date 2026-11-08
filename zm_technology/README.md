@@ -22,18 +22,12 @@ El código admite nombres equivalentes en español (por ejemplo `marca`, `catego
 - Contacto comercial, web y ubicación.
 
 ## Ejecutar
-bash
+
 flutter pub get
 flutter run
 
 
 Se requiere Flutter SDK y conexión a Internet. Android debe conservar el permiso `android.permission.INTERNET`.
-
-## QA para la actividad
-1. Loading: abrir la pestaña API REST mientras carga el catálogo.
-2. Success: esperar los productos reales y abrir la ficha de cualquier producto.
-3. Error: usar “Probar error QA” o desactivar la conexión antes de recargar.
-4. Refresh: deslizar hacia abajo en el catálogo.
 
 ## Autor
 
